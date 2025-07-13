@@ -19,6 +19,8 @@ bls12_377 = ["ark-bls12-377/curve"]
 bls12_381 = ["ark-bls12-381/curve"]
 quiet = []
 cuda-mobile = []
+# features to specify the targeted Poseidon configuration
+poseidon_fr_r2_c1_t8_p31_a17 = []
 
 [dependencies]
 blst = "~0.3.11"

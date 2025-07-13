@@ -35,6 +35,11 @@ fn main() {
         curve = "FEATURE_BLS12_381";
     }
 
+    let mut posidon_feature = "";
+    if cfg!(feature = "poseidon_fr_r2_c1_t8_p31_a17") {
+        posidon_feature = "FEATURE_POSEIDON_FR_R2_C1_T8_P31_A17";
+    }
+
     // account for cross-compilation [by examining environment variable]
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
@@ -109,6 +114,7 @@ fn main() {
         nvcc.flag("-Xcompiler").flag("-Wno-unused-function");
         nvcc.define("TAKE_RESPONSIBILITY_FOR_ERROR_MESSAGE", None);
         nvcc.define(curve, None);
+        nvcc.define(posidon_feature, None);
         if let Some(def) = cc_opt {
             nvcc.define(def, None);
         }

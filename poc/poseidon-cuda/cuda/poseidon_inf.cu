@@ -5,34 +5,22 @@
 #include <util/rusterror.h>
 #include <util/gpu_t.cuh>
 
-/// TODO: This include to be done based on a switching parameter passed at compile time
-#include "poseidon_fr_r2_c1_t8_p31_a17.cuh"
+#include "poseidon.cuh"
 
 
-
-// Check PoseidonStateType size is as expected
-static_assert(
-  sizeof(PoseidonStateType) == (PoseidonParametersType::RateSize + PoseidonParametersType::CapacitySize) * sizeof(PoseidonParametersType::FieldType), 
-  "PoseidonStateType size is not as expected");
-
-// Check PosidonPramaetersType size is as expected
-static_assert(
-  sizeof(PoseidonParametersType) == sizeof(PoseidonParametersType::FieldType) *
-          (PoseidonParametersType::StateSize*PoseidonParametersType::TotalRounds + 
-          PoseidonParametersType::StateSize*PoseidonParametersType::StateSize), 
-          "PoseidonParametersType size is not as expected");
-
-/// TODO: Make sure when passing the state/params from Rust that:
-/// (1) member data are same types/sizes, 
-/// (2) members are at same order, and 
-/// (3) the structs have same padding/alignment.
+/// @brief C++ launcher for the CUDA kernel of Poseidon permutation
+///
+/// @param device_id The ID of the GPU device to use.
+/// @param p_inout_state Pointer to the Poseidon state to be permuted.
+/// @param p_params Pointer to the Poseidon parameters.
+///
+/// @return RustError indicating success or failure of the operation.
 SPPARK_FFI
-RustError::by_value cuda_poseidon_permuration(size_t device_id,
-                                              void* p_inout_state,
-                                              const void* p_params)
-{
+RustError::by_value cuda_poseidon_permuration(size_t device_id, void* p_inout_state, const void* p_params) {
+
     // Check if the pointers are null
     if (!p_inout_state || !p_params) {
+
         std::cerr << "Error: Null pointer passed for state or parameters." << std::endl;
         return RustError{cudaErrorInvalidValue};
     }
@@ -51,14 +39,22 @@ RustError::by_value cuda_poseidon_permuration(size_t device_id,
 
         // Allocate device memory for state and parameters
         dev_ptr_t<PoseidonStateType> d_state{1, gpu};
-        dev_ptr_t<PoseidonParametersType> d_params{1, gpu};
 
-        // Copy host data to device memory
+        // Copy state data to device memory
         gpu.HtoD(&d_state[0], h_state, 1);
-        gpu.HtoD(&d_params[0], h_params, 1);
+
+        // Copy params to constant memory
+        CUDA_OK(cudaMemcpyToSymbol(poseidon_ark, h_params->ark, sizeof(PoseidonParametersType::FieldType) * PoseidonParametersType::TotalRounds * PoseidonParametersType::StateSize));
+        CUDA_OK(cudaMemcpyToSymbol(poseidon_mds, h_params->mds, sizeof(PoseidonParametersType::FieldType) * PoseidonParametersType::StateSize * PoseidonParametersType::StateSize));
 
         // Call the CUDA Kernel CUDA_Poseidon_Permutation
-        CUDA_Poseidon_Permutation<<<1, PoseidonParametersType::StateSize, 0, gpu>>>(&d_state[0], &d_params[0]);
+        CUDA_Poseidon_Permutation
+            <PoseidonStateType,
+             PoseidonParametersType::StateSize,
+             PoseidonParametersType::FullRounds,
+             PoseidonParametersType::PartialRounds,
+             PoseidonParametersType::Alpha>
+            <<<1, PoseidonParametersType::StateSize, 0, gpu>>>(&d_state[0]);
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "CUDA_Poseidon_Permutation CUDA kernel launch error: " << cudaGetErrorString(err) << std::endl;
@@ -71,6 +67,7 @@ RustError::by_value cuda_poseidon_permuration(size_t device_id,
         gpu.sync();
 
     } catch (const cuda_error& e) {
+        
         gpu.sync();
         return RustError{e.code(), e.what()};
     }
