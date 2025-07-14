@@ -8,16 +8,17 @@ The implementation leverages compile-time constants and template specialization 
 
 ## Features
 
-- **Complete CUDA Kernel Implementation**: Full Poseidon hash implementation including all rounds (partial and full)
-- **Rust Bindings**: Safe Rust interface with proper error handling
+- **CUDA Kernel Implementation**: Full Poseidon permutation implementation including all rounds (partial and full)
+- **Rust Bindings**: Safe Rust interface (using FFI) with proper error handling
 - **Multi-Curve Support**: Compatible with BLS12-377 and BLS12-381 scalar fields
 - **Configurable Parameters**: Extensible configuration system for different Poseidon variants
 - **Compile-Time Optimization**: Uses compile-time constants for maximum performance
-- **Integration with Sppark**: Built on the proven Sppark framework for GPU acceleration
-- **Comprehensive Testing**: Unit tests and correctness verification
+- **Integration with Sppark**: Built on the Sppark framework for GPU acceleration
+- **Testing**: Unit tests with ground-truth implementaion (intiial correctness verification)
 
 ## Directory Structure
 
+```
 poc/poseidon-cuda/ 
  ├── src/ 
  │ ├── lib.rs # Main Rust library with public APIs 
@@ -30,6 +31,7 @@ poc/poseidon-cuda/
  ├── Cargo.toml # Rust package configuration 
  ├── build.rs # Build script with CUDA compilation 
  └── README.md # This file
+ ```
 
 ### Directory Details
 
@@ -39,14 +41,58 @@ poc/poseidon-cuda/
 - **`Cargo.toml`**: Package configuration with feature flags for different curves and Poseidon variants
 - **`build.rs`**: Build script that handles CUDA compilation and feature detection
 
-## Requirements and Build Instructions
 
-### Prerequisites
+## Technical Requirements
 
-- CUDA Toolkit (version 11.4 or higher)
-- Rust toolchain (latest stable)
-- NVCC compiler in PATH
-- GPU with Compute Capability 7.0+ (Volta architecture or newer)
+### Hardware Requirements
+
+- **NVIDIA GPU**: GPU with CUDA support and Compute Capability 7.0 or higher
+
+### Software Requirements
+
+#### CUDA Toolkit
+- **Version**: 11.4 or higher
+- **Installation**: Download from [NVIDIA Developer](https://developer.nvidia.com/cuda-downloads)
+- **Components Required**:
+  - CUDA Compiler (nvcc)
+  - CUDA Runtime Library
+
+#### Rust Toolchain
+- **Version**: Latest stable release
+- **Installation**: Install via [rustup](https://rustup.rs/)
+- **Required Components**:
+  - `rustc` (Rust compiler)
+  - `cargo` (Rust package manager)
+
+#### System Dependencies
+- **Operating System**: 
+  - Linux: Ubuntu 18.04+
+  - Windows: Not tested
+  - macOS: Not supported (CUDA limitation)
+
+- **C++ Compiler**: 
+  - Linux: GCC 7+ or Clang 8+
+  - Windows: MSVC 2019+ or compatible
+
+### Verification Commands
+
+```bash
+# Check CUDA installation
+nvcc --version
+
+# Check GPU compute capability
+nvidia-smi
+
+# Check Rust installation
+rustc --version
+cargo --version
+
+# Verify GPU is accessible from CUDA
+deviceQuery  # (from CUDA samples)
+```
+
+
+## Build/Test Instructions
 
 ### Building
 
@@ -154,11 +200,13 @@ if cfg!(feature = "poseidon_fr_r4_c2_t12_p56_a5") {
 
 ## Limitations
 
-1. Single Configuration: Only one Poseidon configuration can be active at build time
+1. Single Configuration Build: Only one Poseidon configuration can be active at build time
 2. Static Parameters: Parameters are fixed at compile time, requiring rebuilds for different configurations
 3. Memory Layout: Current implementation assumes specific memory alignment requirements
 4. Curve Dependency: Tightly coupled to specific elliptic curve implementations
 5. GPU Memory: Large state sizes may be limited by GPU memory constraints
+6. Constant GPU Memory: ARK and MDS paramemetrs are stored in CUDA `__constant__` memory that is limited in size (can limit state size)
+7. CUDA Kernel assumes state resides within a block limiting the state width to the maximum of the block size (1024 elements).
 
 ## Performance Notes
 
@@ -191,6 +239,7 @@ For meaningful performance evaluation, future configurations should include:
 - Pre-allocated Memory Pool: Efficient GPU memory management for repeated operations
 - Streaming Interface: Asynchronous processing with CUDA streams
 - Additional Curves/Posidon-configs
+- Integrate into a Sponge scheme to compolete the full hashing structure
 
 ### Advanced Features
 
