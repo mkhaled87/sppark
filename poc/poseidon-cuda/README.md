@@ -98,7 +98,7 @@ deviceQuery  # (from CUDA samples)
 
 To build the package you need to specify two features, one for the curve used and another one for the Poseidon configuration.
 Currently this package supports the following possible curve features:
-- bls12_381
+- bls12_377
 - bls12_381
 
 and the following Posidon configurations:
