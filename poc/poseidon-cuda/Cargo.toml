@@ -1,5 +1,5 @@
 [package]
-name = "msm-cuda"
+name = "poseidon-cuda"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -19,6 +19,8 @@ bls12_377 = ["ark-bls12-377/curve"]
 bls12_381 = ["ark-bls12-381/curve"]
 quiet = []
 cuda-mobile = []
+# features to specify the targeted Poseidon configuration
+poseidon_fr_r2_c1_t8_p31_a17 = []
 
 [dependencies]
 blst = "~0.3.11"
@@ -35,10 +37,3 @@ ark-bn254 = { version = "0.3.0", optional = true }
 [build-dependencies]
 cc = "^1.0.70"
 which = "^4.0"
-
-[dev-dependencies]
-#criterion = { version = "0.3", features = [ "html_reports" ] }
-
-[[bench]]
-name = "msm"
-harness = false
